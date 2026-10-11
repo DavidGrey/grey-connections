@@ -11,7 +11,7 @@
 
   const EXAMPLE = {
     title: "Sample Puzzle",
-    author: "Grey",
+    author: "Me",
     groups: [
       { name: "Breakfast foods", words: ["Waffle", "Pancake", "Omelet", "Bagel"] },
       { name: "Card games", words: ["Rummy", "Snap", "Hearts", "Poker"] },
