@@ -180,6 +180,54 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
 .word-row input { text-transform: uppercase; font-weight: 600; text-align: center; }
 .word-row input::placeholder, .cat::placeholder { text-transform: none; font-weight: 400; color: rgba(0,0,0,0.45); }
 
+.arrange-box { margin: 20px 0 4px; }
+.arrange-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.arrange-head > div { min-width: 0; flex: 1 1 260px; }
+.arrange-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; }
+.arrange-head p { margin: 0; color: var(--muted); line-height: 1.45; }
+.arrange {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.atile {
+  appearance: none;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  color: var(--tile-text);
+  background: var(--tile);
+  border: 0;
+  border-bottom: 6px solid;
+  border-radius: var(--radius);
+  height: 60px;
+  padding: 0 4px;
+  min-width: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.1;
+  -webkit-tap-highlight-color: transparent;
+}
+.atile span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+.atile.c0 { border-bottom-color: var(--yellow); }
+.atile.c1 { border-bottom-color: var(--green); }
+.atile.c2 { border-bottom-color: var(--blue); }
+.atile.c3 { border-bottom-color: var(--purple); }
+.atile.empty { color: var(--muted); }
+.atile.picked { background: var(--selected); color: var(--selected-text); }
+.atile:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
 .form-error { color: var(--error); font-weight: 600; min-height: 1.2em; margin: 8px 0; }
 
 .form-actions {
@@ -375,6 +423,8 @@ dialog .close {
   .solved span { font-size: 14px; }
   .meta-fields { grid-template-columns: 1fr; }
   .word-row { grid-template-columns: repeat(2, 1fr); }
+  .arrange { gap: 6px; }
+  .atile { font-size: 12px; height: 52px; }
   .btn { padding: 10px 14px; font-size: 15px; }
 }
 
