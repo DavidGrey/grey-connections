@@ -23,8 +23,12 @@
   /* ================= encoding ================= */
 
   // A puzzle travels entirely inside the link. Current links ("c=") hold the
-  // 22 fields as newline-separated text, deflated, then base64url-encoded.
-  // Older links ("p=") hold uncompressed JSON and still decode.
+  // 22 text fields, plus an optional starting layout, as newline-separated
+  // text, deflated, then base64url-encoded. Older links ("p=") hold
+  // uncompressed JSON and still decode.
+  //
+  // A layout lists the 16 grid positions as slot numbers (group * 4 + word),
+  // written in the link as 16 hex digits.
   const toB64url = (bytes) => {
     let bin = "";
     bytes.forEach((b) => (bin += String.fromCharCode(b)));
@@ -44,23 +48,26 @@
     const clean = (s) => s.replace(/[\r\n]+/g, " ");
     if (canCompress) {
       const fields = [p.title, p.author, ...p.groups.flatMap((g) => [g.name, ...g.words])];
+      if (p.layout) fields.push(p.layout.map((n) => n.toString(16)).join(""));
       const raw = new TextEncoder().encode(fields.map(clean).join("\n"));
       return "c=" + toB64url(await pipeBytes(raw, new CompressionStream("deflate-raw")));
     }
     const data = [p.title, p.author, p.groups.map((g) => [g.name, ...g.words])];
+    if (p.layout) data.push(p.layout);
     return "p=" + toB64url(new TextEncoder().encode(JSON.stringify(data)));
   }
 
   async function decodePuzzle(fragment) {
-    let title, author, groups;
+    let title, author, groups, layout;
     if (fragment.startsWith("c=")) {
       const raw = await pipeBytes(fromB64url(fragment.slice(2)), new DecompressionStream("deflate-raw"));
       const f = new TextDecoder().decode(raw).split("\n");
-      if (f.length !== 22) throw new Error("bad puzzle");
+      if (f.length !== 22 && f.length !== 23) throw new Error("bad puzzle");
       [title, author] = f;
       groups = [0, 1, 2, 3].map((i) => f.slice(2 + i * 5, 7 + i * 5));
+      if (f[22]) layout = [...f[22]].map((c) => parseInt(c, 16));
     } else if (fragment.startsWith("p=")) {
-      [title, author, groups] = JSON.parse(new TextDecoder().decode(fromB64url(fragment.slice(2))));
+      [title, author, groups, layout] = JSON.parse(new TextDecoder().decode(fromB64url(fragment.slice(2))));
     } else {
       throw new Error("not a puzzle link");
     }
@@ -74,10 +81,66 @@
       }),
     };
     if (validatePuzzle(puzzle)) throw new Error("invalid puzzle");
+    if (layout !== undefined) {
+      if (!isLayout(layout)) throw new Error("bad layout");
+      puzzle.layout = layout;
+    }
     return puzzle;
   }
 
+  // True if `a` is an arrangement of the slots 0–15, each used once.
+  const isLayout = (a) =>
+    Array.isArray(a) && a.length === 16 && [...a].sort((x, y) => x - y).every((n, i) => n === i);
+
   const norm = (w) => w.trim().toUpperCase();
+
+  /* ================= text fitting ================= */
+
+  // Sets `text`'s font size to the largest that fits inside `box` (at most
+  // its stylesheet size). Words are never broken: a phrase may wrap between
+  // words, but each word must fit on one line.
+  function fitText(box, text) {
+    text.style.fontSize = "";
+    const cs = getComputedStyle(box);
+    const h = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (!text.clientWidth || h <= 0) return; // not visible yet; refit when shown
+    // `text` is capped at the box's width, so a word too long for one line
+    // shows up as scrollWidth exceeding its own width.
+    const fits = () => text.scrollWidth <= text.clientWidth && text.offsetHeight <= h;
+    let hi = parseFloat(getComputedStyle(text).fontSize);
+    if (fits()) return;
+    let lo = 4;
+    while (hi - lo > 0.25) {
+      const mid = (lo + hi) / 2;
+      text.style.fontSize = mid + "px";
+      if (fits()) lo = mid;
+      else hi = mid;
+    }
+    text.style.fontSize = lo + "px";
+  }
+
+  // Fits every tile and solved-row line inside `root`.
+  function fitAll(root) {
+    root.querySelectorAll(".tile, .atile").forEach((t) => fitText(t, t.firstElementChild));
+    root.querySelectorAll(".solved").forEach((row) => [...row.children].forEach((line) => fitText(row, line)));
+  }
+
+  const refit = () => {
+    if (!$("play-view").hidden) fitAll($("board"));
+    if (!$("create-view").hidden) fitAll($("arrange"));
+  };
+  window.addEventListener("resize", refit);
+  // The web font may arrive after the first render and change text widths.
+  if (document.fonts) document.fonts.ready.then(refit);
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
 
   // Returns an error message, or "" if the puzzle is playable.
   function validatePuzzle(p) {
@@ -116,6 +179,7 @@
     $("play-view").hidden = name !== "play";
     $("make-link").hidden = name === "create";
     window.scrollTo(0, 0);
+    refit();
   }
 
   window.addEventListener("hashchange", route);
@@ -171,8 +235,12 @@
     groupFields.appendChild(card);
   }
 
+  // Starting grid chosen in the maker: 16 slot numbers (group * 4 + word).
+  let layout = shuffle([...Array(16).keys()]);
+  let picked = null; // grid position waiting for a second tap to swap
+
   function readForm() {
-    const p = { title: $("f-title").value.trim(), author: $("f-author").value.trim(), groups: [] };
+    const p = { title: $("f-title").value.trim(), author: $("f-author").value.trim(), groups: [], layout: layout.slice() };
     for (let i = 0; i < 4; i++) {
       p.groups.push({
         name: document.querySelector(`.cat[data-g="${i}"]`).value.trim(),
@@ -192,7 +260,51 @@
         document.querySelector(`.word[data-g="${i}"][data-w="${j}"]`).value = (g.words && g.words[j]) || "";
       }
     }
+    layout = isLayout(p.layout) ? p.layout.slice() : shuffle([...Array(16).keys()]);
+    picked = null;
+    renderArrange();
   }
+
+  function renderArrange() {
+    const grid = $("arrange");
+    grid.replaceChildren();
+    layout.forEach((slot, pos) => {
+      const g = slot >> 2;
+      const word = document.querySelector(`.word[data-g="${g}"][data-w="${slot & 3}"]`).value.trim();
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `atile c${g}` + (pos === picked ? " picked" : "") + (word ? "" : " empty");
+      b.setAttribute("aria-pressed", pos === picked ? "true" : "false");
+      b.setAttribute("aria-label", `${word || "Empty"}, ${LEVELS[g].split(" ")[0]} group, position ${pos + 1}`);
+      const span = document.createElement("span");
+      span.textContent = word ? norm(word) : "—";
+      b.appendChild(span);
+      b.addEventListener("click", () => pickTile(pos));
+      grid.appendChild(b);
+    });
+    fitAll(grid);
+  }
+
+  function pickTile(pos) {
+    if (picked === null) picked = pos;
+    else if (picked === pos) picked = null;
+    else {
+      [layout[picked], layout[pos]] = [layout[pos], layout[picked]];
+      picked = null;
+      saveDraft();
+      $("share-box").hidden = true;
+    }
+    renderArrange();
+    if (picked !== null) $("arrange").children[picked].focus();
+  }
+
+  $("btn-arrange-shuffle").addEventListener("click", () => {
+    layout = shuffle(layout);
+    picked = null;
+    saveDraft();
+    $("share-box").hidden = true;
+    renderArrange();
+  });
 
   function markInvalid() {
     const counts = {};
@@ -222,6 +334,7 @@
 
   $("create-form").addEventListener("input", (e) => {
     saveDraft();
+    if (e.target.classList.contains("word")) renderArrange();
     $("share-box").hidden = true;
     if (e.target.classList.contains("invalid")) markInvalid();
   });
@@ -302,15 +415,6 @@
   let puzzle, state, storeKey, busy = false;
   const wordGroup = new Map(); // normalized word -> group index
 
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
   function startGame(p, fragment) {
     puzzle = p;
     wordGroup.clear();
@@ -321,8 +425,11 @@
     try {
       saved = JSON.parse(localStorage.getItem(storeKey) || "null");
     } catch {}
+    const startOrder = puzzle.layout
+      ? puzzle.layout.map((slot) => norm(puzzle.groups[slot >> 2].words[slot & 3]))
+      : shuffle([...wordGroup.keys()]);
     state = saved || {
-      order: shuffle([...wordGroup.keys()]),
+      order: startOrder,
       selected: [],
       solved: [],
       mistakes: 0,
@@ -379,28 +486,10 @@
       b.addEventListener("click", () => toggle(w, b));
       board.appendChild(b);
     });
-    fitTiles();
+    fitAll($("board"));
     renderControls();
   }
 
-  // Shrink long words so they fit their tile.
-  function fitTiles() {
-    document.querySelectorAll(".tile").forEach((t) => {
-      t.style.fontSize = "";
-      const span = t.firstChild;
-      let size = parseFloat(getComputedStyle(t).fontSize);
-      // Prefer a single line for single words; allow wrapping for phrases.
-      const oneWord = !/\s/.test(span.textContent);
-      span.style.whiteSpace = oneWord ? "nowrap" : "normal";
-      while (size > 10 && (span.scrollWidth > t.clientWidth - 8 || span.scrollHeight > t.clientHeight - 6)) {
-        size -= 1;
-        t.style.fontSize = size + "px";
-      }
-    });
-  }
-  window.addEventListener("resize", () => {
-    if (!$("play-view").hidden) fitTiles();
-  });
 
   function renderControls() {
     const dots = $("mistake-dots");
