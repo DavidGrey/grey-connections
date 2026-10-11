@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grey Connections</title>
+  <meta name="description" content="Make your own Connections-style puzzles and send them to friends.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='13' height='13' rx='3' fill='%23f9df6d'/%3E%3Crect x='17' y='2' width='13' height='13' rx='3' fill='%23a0c35a'/%3E%3Crect x='2' y='17' width='13' height='13' rx='3' fill='%23b0c4ef'/%3E%3Crect x='17' y='17' width='13' height='13' rx='3' fill='%23ba81c5'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      Grey Connections
+    </a>
+    <a class="topbar-link" href="#" id="make-link">Make a puzzle</a>
+  </header>
+
+  <!-- ============ CREATE ============ -->
+  <main id="create-view" class="view" hidden>
+    <section class="intro">
+      <h1>Make a Connections puzzle</h1>
+      <p>Pick four categories with four words each. Yellow is the easiest, purple the trickiest. You'll get a link to send to anyone.</p>
+    </section>
+
+    <form id="create-form" autocomplete="off" novalidate>
+      <div class="meta-fields">
+        <label>Puzzle title
+          <input id="f-title" maxlength="60" placeholder="e.g. Friday Night Puzzle">
+        </label>
+        <label>Made by
+          <input id="f-author" maxlength="40" placeholder="Your name">
+        </label>
+      </div>
+
+      <div id="group-fields"></div>
+
+      <p id="form-error" class="form-error" role="alert"></p>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="btn-example">Fill example</button>
+        <button type="button" class="btn" id="btn-clear">Clear</button>
+        <button type="button" class="btn" id="btn-preview">Test play</button>
+        <button type="submit" class="btn btn-primary">Create link</button>
+      </div>
+    </form>
+
+    <section id="share-box" class="share-box" hidden>
+      <h2>Your puzzle is ready</h2>
+      <p>Send this link to anyone. The answers are scrambled into the link, so no account or server is needed.</p>
+      <div class="link-row">
+        <input id="share-url" readonly>
+        <button type="button" class="btn btn-primary" id="btn-copy">Copy</button>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" id="btn-native-share" hidden>Share…</button>
+        <a class="btn" id="btn-open" target="_blank" rel="noopener">Open puzzle</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ PLAY ============ -->
+  <main id="play-view" class="view" hidden>
+    <section class="play-head">
+      <h1 id="p-title"></h1>
+      <p id="p-author" class="byline"></p>
+      <p class="prompt">Create four groups of four!</p>
+    </section>
+
+    <div id="board" class="board" aria-live="polite"></div>
+
+    <div class="mistakes" id="mistakes">
+      Mistakes Remaining:
+      <span class="dots" id="mistake-dots"></span>
+    </div>
+
+    <div class="controls" id="controls">
+      <button type="button" class="btn" id="btn-shuffle">Shuffle</button>
+      <button type="button" class="btn" id="btn-deselect" disabled>Deselect All</button>
+      <button type="button" class="btn btn-primary" id="btn-submit" disabled>Submit</button>
+    </div>
+    <div class="controls" id="end-controls" hidden>
+      <button type="button" class="btn btn-primary" id="btn-results">View Results</button>
+    </div>
+
+    <p class="play-foot"><a href="#" class="make-own">Make your own puzzle →</a></p>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="assertive"></div>
+
+  <dialog id="results">
+    <button class="close" id="results-close" aria-label="Close">×</button>
+    <h2 id="r-heading"></h2>
+    <p id="r-sub" class="byline"></p>
+    <div id="r-grid" class="r-grid"></div>
+    <div class="form-actions center">
+      <button type="button" class="btn btn-primary" id="btn-share-results">Share Your Results</button>
+    </div>
+    <p class="center"><a href="#" class="make-own">Make your own puzzle →</a></p>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
