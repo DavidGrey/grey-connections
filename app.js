@@ -187,8 +187,10 @@
 
   try {
     const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-    if (draft) fillForm(draft);
-  } catch {}
+    fillForm(draft || EXAMPLE);
+  } catch {
+    fillForm(EXAMPLE);
+  }
 
   $("create-form").addEventListener("input", (e) => {
     saveDraft();
@@ -218,6 +220,7 @@
     $("share-url").value = url;
     $("btn-open").href = url;
     $("btn-native-share").hidden = !navigator.share;
+    $("framed-note").hidden = window.top === window;
     $("share-box").hidden = false;
     $("share-box").scrollIntoView({ behavior: "smooth", block: "center" });
   });
@@ -234,8 +237,21 @@
     $("form-error").textContent = "";
   });
 
+  // Two-step clear instead of confirm(), which some embedded browsers block.
+  let clearArmed = null;
   $("btn-clear").addEventListener("click", () => {
-    if (!confirm("Clear all fields?")) return;
+    const btn = $("btn-clear");
+    if (!clearArmed) {
+      btn.textContent = "Tap again to clear";
+      clearArmed = setTimeout(() => {
+        clearArmed = null;
+        btn.textContent = "Clear";
+      }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed);
+    clearArmed = null;
+    btn.textContent = "Clear";
     fillForm({});
     saveDraft();
     $("form-error").textContent = "";

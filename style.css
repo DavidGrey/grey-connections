@@ -200,6 +200,7 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
 .share-box h2 { margin: 0 0 6px; font-size: 20px; }
 .share-box p { margin: 0 0 12px; color: var(--muted); line-height: 1.45; }
 .link-row { display: flex; gap: 8px; }
+.share-box .framed-note { color: var(--text); font-weight: 600; }
 .link-row input { font-size: 14px; }
 
 /* ---------- play ---------- */
