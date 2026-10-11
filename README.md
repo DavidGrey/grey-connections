@@ -3,7 +3,7 @@
 Make your own Connections-style puzzles and send them to friends.
 
 - **Create:** fill in four categories (yellow → purple, easiest → trickiest) with four words each, then hit **Create link**.
-- **Share:** the whole puzzle is packed into the link (after `#p=`), so there's no server, database, or account. Anyone with the link can play.
+- **Share:** the whole puzzle is packed into the link (compressed, after the `#`), so there's no server, database, or account. Anyone with the link can play.
 - **Play:** same rules as the original game — select four tiles, submit, four mistakes allowed, "One away..." hints, and a shareable emoji results grid.
 
 Progress on each puzzle and your in-progress draft are saved in the browser's local storage.
