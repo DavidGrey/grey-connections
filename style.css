@@ -219,7 +219,7 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
   line-height: 1.1;
   -webkit-tap-highlight-color: transparent;
 }
-.atile span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+.atile span { display: block; max-width: 100%; white-space: normal; overflow-wrap: normal; word-break: keep-all; hyphens: none; }
 .atile.c0 { border-bottom-color: var(--yellow); }
 .atile.c1 { border-bottom-color: var(--green); }
 .atile.c2 { border-bottom-color: var(--blue); }
@@ -291,7 +291,7 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
   min-width: 0;
   transition: background-color 0.12s, color 0.12s, transform 0.1s;
 }
-.tile span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+.tile span { display: block; max-width: 100%; white-space: normal; overflow-wrap: normal; word-break: keep-all; hyphens: none; }
 .tile:active { transform: scale(0.96); }
 .tile.selected { background: var(--selected); color: var(--selected-text); }
 .tile.jump { animation: jump 0.35s ease; }
@@ -317,6 +317,7 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
 .solved.c3 { background: var(--purple); }
 .solved strong { font-size: 20px; font-weight: 800; text-transform: uppercase; }
 .solved span { font-size: 18px; text-transform: uppercase; }
+.solved strong, .solved span { display: block; max-width: 100%; white-space: nowrap; }
 
 @keyframes jump {
   0%, 100% { transform: translateY(0); }

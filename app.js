@@ -94,6 +94,45 @@
 
   const norm = (w) => w.trim().toUpperCase();
 
+  /* ================= text fitting ================= */
+
+  // Sets `text`'s font size to the largest that fits inside `box` (at most
+  // its stylesheet size). Words are never broken: a phrase may wrap between
+  // words, but each word must fit on one line.
+  function fitText(box, text) {
+    text.style.fontSize = "";
+    const cs = getComputedStyle(box);
+    const h = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (!text.clientWidth || h <= 0) return; // not visible yet; refit when shown
+    // `text` is capped at the box's width, so a word too long for one line
+    // shows up as scrollWidth exceeding its own width.
+    const fits = () => text.scrollWidth <= text.clientWidth && text.offsetHeight <= h;
+    let hi = parseFloat(getComputedStyle(text).fontSize);
+    if (fits()) return;
+    let lo = 4;
+    while (hi - lo > 0.25) {
+      const mid = (lo + hi) / 2;
+      text.style.fontSize = mid + "px";
+      if (fits()) lo = mid;
+      else hi = mid;
+    }
+    text.style.fontSize = lo + "px";
+  }
+
+  // Fits every tile and solved-row line inside `root`.
+  function fitAll(root) {
+    root.querySelectorAll(".tile, .atile").forEach((t) => fitText(t, t.firstElementChild));
+    root.querySelectorAll(".solved").forEach((row) => [...row.children].forEach((line) => fitText(row, line)));
+  }
+
+  const refit = () => {
+    if (!$("play-view").hidden) fitAll($("board"));
+    if (!$("create-view").hidden) fitAll($("arrange"));
+  };
+  window.addEventListener("resize", refit);
+  // The web font may arrive after the first render and change text widths.
+  if (document.fonts) document.fonts.ready.then(refit);
+
   function shuffle(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -140,6 +179,7 @@
     $("play-view").hidden = name !== "play";
     $("make-link").hidden = name === "create";
     window.scrollTo(0, 0);
+    refit();
   }
 
   window.addEventListener("hashchange", route);
@@ -242,6 +282,7 @@
       b.addEventListener("click", () => pickTile(pos));
       grid.appendChild(b);
     });
+    fitAll(grid);
   }
 
   function pickTile(pos) {
@@ -445,28 +486,10 @@
       b.addEventListener("click", () => toggle(w, b));
       board.appendChild(b);
     });
-    fitTiles();
+    fitAll($("board"));
     renderControls();
   }
 
-  // Shrink long words so they fit their tile.
-  function fitTiles() {
-    document.querySelectorAll(".tile").forEach((t) => {
-      t.style.fontSize = "";
-      const span = t.firstChild;
-      let size = parseFloat(getComputedStyle(t).fontSize);
-      // Prefer a single line for single words; allow wrapping for phrases.
-      const oneWord = !/\s/.test(span.textContent);
-      span.style.whiteSpace = oneWord ? "nowrap" : "normal";
-      while (size > 10 && (span.scrollWidth > t.clientWidth - 8 || span.scrollHeight > t.clientHeight - 6)) {
-        size -= 1;
-        t.style.fontSize = size + "px";
-      }
-    });
-  }
-  window.addEventListener("resize", () => {
-    if (!$("play-view").hidden) fitTiles();
-  });
 
   function renderControls() {
     const dots = $("mistake-dots");
