@@ -22,20 +22,48 @@
 
   /* ================= encoding ================= */
 
-  // A puzzle travels entirely inside the link: compact JSON -> UTF-8 -> base64url.
-  function encodePuzzle(p) {
-    const data = [p.title, p.author, p.groups.map((g) => [g.name, ...g.words])];
-    const bytes = new TextEncoder().encode(JSON.stringify(data));
+  // A puzzle travels entirely inside the link. Current links ("c=") hold the
+  // 22 fields as newline-separated text, deflated, then base64url-encoded.
+  // Older links ("p=") hold uncompressed JSON and still decode.
+  const toB64url = (bytes) => {
     let bin = "";
     bytes.forEach((b) => (bin += String.fromCharCode(b)));
     return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  }
-
-  function decodePuzzle(code) {
+  };
+  const fromB64url = (code) => {
     let s = code.replace(/-/g, "+").replace(/_/g, "/");
     while (s.length % 4) s += "=";
-    const bytes = Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-    const [title, author, groups] = JSON.parse(new TextDecoder().decode(bytes));
+    return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  };
+  const pipeBytes = (bytes, stream) =>
+    new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer().then((b) => new Uint8Array(b));
+  const canCompress = typeof CompressionStream === "function";
+
+  // Returns the link fragment for a puzzle, e.g. "c=…".
+  async function encodePuzzle(p) {
+    const clean = (s) => s.replace(/[\r\n]+/g, " ");
+    if (canCompress) {
+      const fields = [p.title, p.author, ...p.groups.flatMap((g) => [g.name, ...g.words])];
+      const raw = new TextEncoder().encode(fields.map(clean).join("\n"));
+      return "c=" + toB64url(await pipeBytes(raw, new CompressionStream("deflate-raw")));
+    }
+    const data = [p.title, p.author, p.groups.map((g) => [g.name, ...g.words])];
+    return "p=" + toB64url(new TextEncoder().encode(JSON.stringify(data)));
+  }
+
+  async function decodePuzzle(fragment) {
+    let title, author, groups;
+    if (fragment.startsWith("c=")) {
+      const raw = await pipeBytes(fromB64url(fragment.slice(2)), new DecompressionStream("deflate-raw"));
+      const f = new TextDecoder().decode(raw).split("\n");
+      if (f.length !== 22) throw new Error("bad puzzle");
+      [title, author] = f;
+      groups = [0, 1, 2, 3].map((i) => f.slice(2 + i * 5, 7 + i * 5));
+    } else if (fragment.startsWith("p=")) {
+      [title, author, groups] = JSON.parse(new TextDecoder().decode(fromB64url(fragment.slice(2))));
+    } else {
+      throw new Error("not a puzzle link");
+    }
     if (!Array.isArray(groups) || groups.length !== 4) throw new Error("bad puzzle");
     const puzzle = {
       title: String(title || ""),
@@ -69,11 +97,11 @@
 
   /* ================= routing ================= */
 
-  function route() {
+  async function route() {
     const hash = location.hash.slice(1);
-    if (hash.startsWith("p=")) {
+    if (hash.startsWith("c=") || hash.startsWith("p=")) {
       try {
-        startGame(hash.slice(2));
+        startGame(await decodePuzzle(hash), hash);
         return;
       } catch (e) {
         console.error(e);
@@ -210,13 +238,13 @@
     return p;
   }
 
-  const playUrl = (code) => `${location.origin}${location.pathname}#p=${code}`;
+  const playUrl = (fragment) => `${location.origin}${location.pathname}#${fragment}`;
 
-  $("create-form").addEventListener("submit", (e) => {
+  $("create-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const p = buildPuzzleOrError();
     if (!p) return;
-    const url = playUrl(encodePuzzle(p));
+    const url = playUrl(await encodePuzzle(p));
     $("share-url").value = url;
     $("btn-open").href = url;
     $("btn-native-share").hidden = !navigator.share;
@@ -225,9 +253,9 @@
     $("share-box").scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
-  $("btn-preview").addEventListener("click", () => {
+  $("btn-preview").addEventListener("click", async () => {
     const p = buildPuzzleOrError();
-    if (p) location.hash = "p=" + encodePuzzle(p);
+    if (p) location.hash = await encodePuzzle(p);
   });
 
   $("btn-example").addEventListener("click", () => {
@@ -283,12 +311,12 @@
     return a;
   }
 
-  function startGame(code) {
-    puzzle = decodePuzzle(code);
+  function startGame(p, fragment) {
+    puzzle = p;
     wordGroup.clear();
     puzzle.groups.forEach((g, gi) => g.words.forEach((w) => wordGroup.set(norm(w), gi)));
 
-    storeKey = "gc:play:" + code;
+    storeKey = "gc:play:" + fragment;
     let saved = null;
     try {
       saved = JSON.parse(localStorage.getItem(storeKey) || "null");
