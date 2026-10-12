@@ -8,7 +8,7 @@
 
   // Visitor counting with GoatCounter (https://www.goatcounter.com). Put your
   // GoatCounter code here (the "xyz" in xyz.goatcounter.com) to switch it on.
-  const GOATCOUNTER_CODE = "";
+  const GOATCOUNTER_CODE = "zeppo";
 
   const $ = (id) => document.getElementById(id);
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
