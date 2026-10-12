@@ -32,3 +32,9 @@ Puzzles live in their links, so a sent link can't be deleted. But the site can r
 3. After GitHub Pages redeploys (a minute or two), that link and any other link to the same puzzle show "This puzzle has been removed".
 
 The ID comes from the puzzle's title, categories and words, so changing any of those makes a new puzzle with a new ID.
+
+## Visitor stats
+
+Visits are counted with [GoatCounter](https://www.goatcounter.com) (free, no cookies). To switch it on, set `GOATCOUNTER_CODE` near the top of `app.js` to your GoatCounter code (the `xyz` in `xyz.goatcounter.com`).
+
+It records page views for the maker (`/`), played puzzles (`/play`) and removed puzzles (`/removed`), plus the events `link-created`, `puzzle-won` and `puzzle-lost`. The part of the link after `#`, which holds the puzzle and its answers, is never sent. Counting is off on `localhost` and in embedded previews.

@@ -6,6 +6,10 @@
   const MAX_MISTAKES = 4;
   const DRAFT_KEY = "gc:draft";
 
+  // Visitor counting with GoatCounter (https://www.goatcounter.com). Put your
+  // GoatCounter code here (the "xyz" in xyz.goatcounter.com) to switch it on.
+  const GOATCOUNTER_CODE = "";
+
   const $ = (id) => document.getElementById(id);
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -186,6 +190,31 @@
     }
   }
 
+  /* ================= visitor counting ================= */
+
+  // Only fixed paths and event names are sent, never the link's #fragment,
+  // which holds the puzzle and its answers.
+  const analyticsOn =
+    GOATCOUNTER_CODE && !/^(localhost|127\.|\[::1\])/.test(location.hostname) && window.top === window;
+  const pendingCounts = [];
+
+  function count(path, title, event = false) {
+    if (!analyticsOn) return;
+    const hit = { path, title, event };
+    if (window.goatcounter && window.goatcounter.count) window.goatcounter.count(hit);
+    else pendingCounts.push(hit);
+  }
+
+  if (analyticsOn) {
+    window.goatcounter = { no_onload: true };
+    const sc = document.createElement("script");
+    sc.async = true;
+    sc.src = "https://gc.zgo.at/count.js";
+    sc.dataset.goatcounter = `https://${GOATCOUNTER_CODE}.goatcounter.com/count`;
+    sc.onload = () => pendingCounts.splice(0).forEach((hit) => window.goatcounter.count(hit));
+    document.head.appendChild(sc);
+  }
+
   /* ================= routing ================= */
 
   async function route() {
@@ -197,9 +226,11 @@
         if (await isRevoked(id)) {
           document.title = "Puzzle removed · Grey Connections";
           showView("removed");
+          count("/removed", "Removed puzzle");
           return;
         }
         startGame(p, hash, id);
+        count("/play", "Play puzzle");
         return;
       } catch (e) {
         console.error(e);
@@ -207,6 +238,7 @@
       }
     }
     showView("create");
+    count("/", "Puzzle maker");
   }
 
   function showView(name) {
@@ -400,6 +432,7 @@
     $("btn-native-share").hidden = !navigator.share;
     $("framed-note").hidden = window.top === window;
     $("share-box").hidden = false;
+    count("link-created", "Created a puzzle link", true);
     $("share-box").scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
@@ -627,7 +660,10 @@
 
     busy = false;
     renderControls();
-    if (state.done) setTimeout(showResults, 900);
+    if (state.done) {
+      count(state.won ? "puzzle-won" : "puzzle-lost", state.won ? "Solved a puzzle" : "Lost a puzzle", true);
+      setTimeout(showResults, 900);
+    }
   }
 
   async function revealRemaining() {
