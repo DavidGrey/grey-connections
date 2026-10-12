@@ -1,4 +1,6 @@
 {
   "how_to_use": "To take a puzzle down, add its Puzzle ID (shown when you create the link, and under the puzzle when it's opened) to the list below, in quotes, separated by commas. Example: \"revoked\": [\"1a2b3c4d\", \"5e6f7a8b\"]",
-  "revoked": []
+  "revoked": [
+    "c87a95bf"
+  ]
 }
