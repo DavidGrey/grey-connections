@@ -360,6 +360,13 @@ input.invalid { border-color: var(--error); outline-color: var(--error); }
   flex-wrap: wrap;
 }
 .play-foot { text-align: center; margin-top: 32px; font-size: 14px; }
+.puzzle-id { text-align: center; color: var(--muted); font-size: 12px; margin: 12px 0 0; }
+.puzzle-id-note { margin: 14px 0 0 !important; font-size: 14px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.95em; }
+
+.removed { text-align: center; padding-block: 48px; }
+.removed h1 { font-size: 28px; font-weight: 800; margin: 0 0 8px; text-wrap: balance; }
+.removed p { color: var(--muted); margin: 0 0 24px; line-height: 1.45; }
 
 /* ---------- toast ---------- */
 .toast {

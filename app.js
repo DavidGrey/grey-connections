@@ -158,13 +158,48 @@
     return "";
   }
 
+  /* ================= puzzle IDs and takedowns ================= */
+
+  // A puzzle's ID depends only on its title, categories and words, so every
+  // link to the same puzzle (any layout, any link format) shares one ID.
+  async function puzzleId(p) {
+    if (!(window.crypto && crypto.subtle)) return "";
+    const text = [p.title.trim(), ...p.groups.flatMap((g) => [g.name.trim(), ...g.words.map(norm)])].join("\n");
+    const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
+    return [...hash.slice(0, 4)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // revoked.json lists the IDs of puzzles their makers have taken down. If it
+  // can't be loaded (offline, slow network), puzzles stay playable.
+  async function isRevoked(id) {
+    if (!id) return false;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch("revoked.json", { cache: "no-cache", signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) return false;
+      const { revoked } = await res.json();
+      return Array.isArray(revoked) && revoked.some((r) => String(r).trim().toLowerCase() === id);
+    } catch {
+      return false;
+    }
+  }
+
   /* ================= routing ================= */
 
   async function route() {
     const hash = location.hash.slice(1);
     if (hash.startsWith("c=") || hash.startsWith("p=")) {
       try {
-        startGame(await decodePuzzle(hash), hash);
+        const p = await decodePuzzle(hash);
+        const id = await puzzleId(p);
+        if (await isRevoked(id)) {
+          document.title = "Puzzle removed · Grey Connections";
+          showView("removed");
+          return;
+        }
+        startGame(p, hash, id);
         return;
       } catch (e) {
         console.error(e);
@@ -177,6 +212,7 @@
   function showView(name) {
     $("create-view").hidden = name !== "create";
     $("play-view").hidden = name !== "play";
+    $("removed-view").hidden = name !== "removed";
     $("make-link").hidden = name === "create";
     window.scrollTo(0, 0);
     refit();
@@ -358,6 +394,7 @@
     const p = buildPuzzleOrError();
     if (!p) return;
     const url = playUrl(await encodePuzzle(p));
+    $("share-id").textContent = (await puzzleId(p)) || "unavailable";
     $("share-url").value = url;
     $("btn-open").href = url;
     $("btn-native-share").hidden = !navigator.share;
@@ -415,7 +452,7 @@
   let puzzle, state, storeKey, busy = false;
   const wordGroup = new Map(); // normalized word -> group index
 
-  function startGame(p, fragment) {
+  function startGame(p, fragment, id) {
     puzzle = p;
     wordGroup.clear();
     puzzle.groups.forEach((g, gi) => g.words.forEach((w) => wordGroup.set(norm(w), gi)));
@@ -447,6 +484,7 @@
     document.title = (puzzle.title || "Puzzle") + " · Grey Connections";
     $("p-title").textContent = puzzle.title || "Connections";
     $("p-author").textContent = puzzle.author ? `by ${puzzle.author}` : "";
+    $("p-id").textContent = id ? `Puzzle ID: ${id}` : "";
     showView("play");
     render();
     if (state.done) $("results").open || setTimeout(showResults, 300);

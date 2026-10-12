@@ -72,6 +72,7 @@
         <button type="button" class="btn" id="btn-native-share" hidden>Share…</button>
         <a class="btn" id="btn-open" target="_blank" rel="noopener">Open puzzle</a>
       </div>
+      <p class="puzzle-id-note">Puzzle ID: <code id="share-id"></code>. To take this puzzle down later, add this ID to <code>revoked.json</code> in the site's GitHub repo.</p>
     </section>
   </main>
 
@@ -100,6 +101,16 @@
     </div>
 
     <p class="play-foot"><a href="#" class="make-own">Make your own puzzle →</a></p>
+    <p class="puzzle-id" id="p-id"></p>
+  </main>
+
+  <!-- ============ REMOVED ============ -->
+  <main id="removed-view" class="view" hidden>
+    <section class="removed">
+      <h1>This puzzle has been removed</h1>
+      <p>Whoever made it has taken it down, so it can't be played any more.</p>
+      <a href="#" class="btn btn-primary make-own">Make your own puzzle</a>
+    </section>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="assertive"></div>
